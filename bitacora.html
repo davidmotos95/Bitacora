@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bitácora">
+<meta name="theme-color" content="#EDEFF3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12141C" media="(prefers-color-scheme: dark)">
+<title>Bitácora</title>
+<style>
+:root{
+  --bg:#EDEFF3;--surface:#FFFFFF;--ink:#151B33;--muted:#667089;--line:#D8DCE6;
+  --accent:#2F44D8;--on-accent:#FFFFFF;--star:#E5A100;
+  --s-pending:#7A819D;--s-doing:#C77F00;--s-done:#1B9A68;--s-dropped:#C9455A;
+  --serif:ui-serif,"New York",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#12141C;--surface:#1C1F2B;--ink:#ECEEF6;--muted:#9AA1BA;--line:#2D3144;
+    --accent:#8C99FF;--on-accent:#12141C;--star:#F2B71F;
+    --s-pending:#9097B3;--s-doing:#E9A21C;--s-done:#3CC48C;--s-dropped:#EE6C80}
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 var(--sans);-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  padding:calc(env(safe-area-inset-top,0px) + 10px) 20px 4px}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{font:700 34px/1.1 var(--serif);margin:0;letter-spacing:-.01em}
+.count{margin:2px 0 0;color:var(--muted);font-size:13px}
+.icon-btn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
+.icon-btn svg{width:22px;height:22px}
+#chips{display:flex;gap:8px;overflow-x:auto;padding:12px 0 10px;scrollbar-width:none}
+#chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:14px;color:var(--muted);background:var(--surface)}
+.chip span{opacity:.7;margin-left:2px}
+.chip.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+
+main{padding:8px 16px calc(170px + env(safe-area-inset-bottom,0px))}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:18px 12px}
+.card{display:block;text-align:left;min-width:0}
+.cv{display:block;aspect-ratio:2/3;border-radius:6px;overflow:hidden;background:var(--line);
+  box-shadow:0 1px 2px rgba(0,0,0,.22),0 8px 16px -6px rgba(21,27,51,.25)}
+.cv img{display:block;width:100%;height:100%;object-fit:cover}
+.cv.ph{display:grid;place-items:center}
+.cv.ph em{font:italic 700 44px/1 var(--serif);color:rgba(255,255,255,.92)}
+.ph-movie{background:linear-gradient(160deg,#3F4DB0,#1C2354)}
+.ph-tv{background:linear-gradient(160deg,#84419A,#38194A)}
+.ph-book{background:linear-gradient(160deg,#2E8070,#12403A)}
+.ph-game{background:linear-gradient(160deg,#C25A33,#5A2312)}
+.ct{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:8px;font-size:13px;font-weight:600;line-height:1.25}
+.cm{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:12px;color:var(--muted);white-space:nowrap}
+.cm .st{margin-left:auto;color:var(--star);letter-spacing:-1px;font-weight:400}
+.ck{font-size:11px;color:var(--muted);margin-top:1px}
+.dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--s-pending)}
+.s-pending{--c:var(--s-pending)}.s-doing{--c:var(--s-doing)}.s-done{--c:var(--s-done)}.s-dropped{--c:var(--s-dropped)}
+.dot.s-pending,.dot.s-doing,.dot.s-done,.dot.s-dropped{background:var(--c)}
+.empty{grid-column:1/-1;text-align:center;padding:64px 24px 0}
+.empty p{margin:0 0 6px;font:600 20px/1.3 var(--serif)}
+.empty .muted{font:400 15px/1.4 var(--sans)}
+.muted{color:var(--muted)}
+
+nav{position:fixed;left:0;right:0;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(5,1fr);
+  background:color-mix(in srgb,var(--surface) 90%,transparent);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{position:relative;padding:14px 0 13px;font-size:13px;font-weight:500;color:var(--muted)}
+nav button.on{color:var(--accent);font-weight:700}
+nav button.on::before{content:"";position:absolute;top:-1px;left:25%;right:25%;height:3px;border-radius:0 0 3px 3px;background:var(--accent)}
+#fab{position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 68px);z-index:6;width:58px;height:58px;border-radius:50%;
+  background:var(--accent);color:var(--on-accent);display:grid;place-items:center;box-shadow:0 8px 22px rgba(20,30,110,.4)}
+#fab svg{width:26px;height:26px}
+
+#overlay{position:fixed;inset:0;z-index:20;background:rgba(10,14,30,.5);opacity:0;pointer-events:none;transition:opacity .2s}
+#overlay.open{opacity:1;pointer-events:auto}
+#sheet{position:absolute;left:0;right:0;bottom:0;max-height:92%;overflow-y:auto;overscroll-behavior:contain;background:var(--surface);
+  border-radius:20px 20px 0 0;padding:16px 20px calc(28px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1)}
+#overlay.open #sheet{transform:none}
+@media (prefers-reduced-motion:reduce){#sheet,#overlay{transition:none}}
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sh h2{font:700 24px/1.2 var(--serif);margin:0}
+.done{color:var(--accent);font-weight:700;padding:8px 0 8px 12px}
+.pick{display:flex;gap:8px;overflow-x:auto;margin-bottom:12px}
+.pick .chip{background:var(--bg)}
+input,textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;-webkit-appearance:none;appearance:none}
+textarea{resize:vertical;min-height:130px;line-height:1.45}
+input[type=date]{min-height:46px}
+label,.lbl{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:18px 0 6px}
+.note{color:var(--muted);font-size:14px;margin:14px 0}
+.note p{margin:0 0 10px}
+.btn{display:block;width:100%;text-align:center;padding:12px;border-radius:12px;background:var(--accent);color:var(--on-accent);font-weight:700;margin-top:10px}
+.btn.alt{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:none;color:var(--s-dropped);border:1px solid var(--line);margin-top:26px}
+.res{display:flex;gap:14px;width:100%;text-align:left;padding:10px 0;border-bottom:1px solid var(--line);align-items:center}
+.res .cv{width:46px;flex:none;box-shadow:none;border-radius:4px}
+.res .cv.ph em{font-size:22px}
+.res b{display:block;font-size:15px;line-height:1.25}
+.res small{color:var(--muted);font-size:13px}
+.dhead{display:flex;gap:16px;align-items:flex-start}
+.dhead .cv{width:84px;flex:none}
+.dhead>div{flex:1;min-width:0}
+.dhead input{font:700 18px/1.25 var(--serif);padding:10px 12px}
+.dhead p{margin:6px 0 0;font-size:13px;color:var(--muted)}
+.link{color:var(--accent);font-size:14px;font-weight:600;padding:8px 0}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.seg button{padding:11px 2px;border-radius:10px;border:1px solid var(--line);font-size:12px;font-weight:600;color:var(--muted);background:var(--bg)}
+.seg button.on{background:var(--c);border-color:var(--c);color:#fff}
+.stars{display:flex;gap:2px;margin-left:-4px}
+.stars button{font-size:36px;line-height:1;padding:2px 5px;color:var(--line)}
+.stars button.on{color:var(--star)}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 140px);transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--bg);
+  padding:10px 16px;border-radius:999px;font-size:14px;max-width:86%;text-align:center}
+a{color:var(--accent)}
+.hl{font-size:13px;color:var(--muted);margin:4px 0 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div><h1 id="title">Todo</h1><p class="count" id="count"></p></div>
+    <button class="icon-btn" data-act="settings" aria-label="Ajustes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></svg>
+    </button>
+  </div>
+  <div id="chips"></div>
+</header>
+<main><div id="grid"></div></main>
+<button id="fab" data-act="add" aria-label="Añadir título">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+<nav id="tabs"></nav>
+<div id="overlay"><div id="sheet" role="dialog" aria-modal="true"><div id="sheetBody"></div></div></div>
+
+<script>
+const CATS={
+  movie:{label:'Películas',one:'Película',ph:'Título de la película'},
+  tv:{label:'Series',one:'Serie',ph:'Título de la serie'},
+  book:{label:'Libros',one:'Libro',ph:'Título del libro'},
+  game:{label:'Juegos',one:'Videojuego',ph:'Título del juego'}
+};
+const STATUSES=['pending','doing','done','dropped'];
+const SL={pending:'Pendiente',doing:'En proceso',done:'Completado',dropped:'Abandonado'};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('No se pudo guardar en este dispositivo')}}
+};
+let items=store.get('bt.items',[]);
+let cfg=Object.assign({tmdb:'',rawg:''},store.get('bt.cfg',{}));
+let tab=store.get('bt.tab','all');
+let filter='all';
+let ctx=null, cur=null;
+const save=()=>store.set('bt.items',items);
+
+/* ---------- Lista ---------- */
+function coverHTML(i){
+  const ini=esc((i.title||'?').trim().charAt(0).toUpperCase());
+  return i.cover
+    ? `<span class="cv" data-kind="${i.cat}" data-ini="${ini}"><img src="${esc(i.cover)}" alt="" loading="lazy" referrerpolicy="no-referrer"></span>`
+    : `<span class="cv ph ph-${i.cat}"><em>${ini}</em></span>`;
+}
+function cardHTML(i){
+  return `<button class="card" data-open="${i.id}">${coverHTML(i)}
+    <span class="ct">${esc(i.title)}</span>
+    <span class="cm"><i class="dot s-${i.status}"></i>${SL[i.status]}${i.rating?`<span class="st">${'★'.repeat(i.rating)}</span>`:''}</span>
+    ${tab==='all'?`<span class="ck" style="display:block">${CATS[i.cat].one}</span>`:''}</button>`;
+}
+function render(){
+  $('#title').textContent=tab==='all'?'Todo':CATS[tab].label;
+  $('#tabs').innerHTML=[['all','Todo'],...Object.entries(CATS).map(([k,v])=>[k,v.label])]
+    .map(([k,l])=>`<button data-tab="${k}" class="${tab===k?'on':''}">${l}</button>`).join('');
+  const inTab=items.filter(i=>tab==='all'||i.cat===tab);
+  const n=inTab.length;
+  $('#count').textContent=n?`${n} ${n===1?'título':'títulos'}, ${inTab.filter(i=>i.status==='done').length} completados`:'';
+  $('#chips').innerHTML=[['all','Todos'],...STATUSES.map(s=>[s,SL[s]])].map(([k,l])=>{
+    const c=k==='all'?n:inTab.filter(i=>i.status===k).length;
+    return `<button class="chip${filter===k?' on':''}" data-filter="${k}">${l} <span>${c}</span></button>`}).join('');
+  const list=inTab.filter(i=>filter==='all'||i.status===filter).sort((a,b)=>b.added-a.added);
+  $('#grid').innerHTML=list.length?list.map(cardHTML).join(''):
+    `<div class="empty"><p>${n?`Nada en «${SL[filter]}»`:(tab==='all'?'Tu bitácora está vacía':`Aún no tienes ${CATS[tab].label.toLowerCase()}`)}</p>
+     ${n?'':'<span class="muted">Toca + y escribe un título. La portada se descarga sola.</span>'}</div>`;
+}
+document.addEventListener('error',e=>{
+  const im=e.target;
+  if(im.tagName==='IMG'&&im.parentElement.classList.contains('cv')){
+    const cv=im.parentElement;cv.classList.add('ph','ph-'+cv.dataset.kind);cv.innerHTML=`<em>${cv.dataset.ini||'?'}</em>`;
+  }
+},true);
+
+/* ---------- Hoja inferior ---------- */
+const head=t=>`<div class="sh"><h2>${t}</h2><button class="done" data-act="close">Listo</button></div>`;
+function openSheet(html){$('#sheetBody').innerHTML=html;$('#overlay').classList.add('open');$('#sheet').scrollTop=0}
+function closeSheet(){$('#overlay').classList.remove('open');ctx=null;cur=null;if(document.activeElement)document.activeElement.blur();render()}
+$('#overlay').addEventListener('click',e=>{if(e.target.id==='overlay')closeSheet()});
+let toastT;
+function toast(m){document.querySelectorAll('.toast').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);clearTimeout(toastT);toastT=setTimeout(()=>t.remove(),2400)}
+
+/* ---------- Búsqueda de portadas ---------- */
+const enc=encodeURIComponent;
+async function tmdb(kind,q){
+  const k=cfg.tmdb.trim();if(!k)throw new Error('nokey:tmdb');
+  const bearer=k.length>40;
+  const url=`https://api.themoviedb.org/3/search/${kind}?language=es-ES&include_adult=false&query=${enc(q)}`+(bearer?'':`&api_key=${enc(k)}`);
+  const r=await fetch(url,bearer?{headers:{Authorization:'Bearer '+k}}:{});
+  if(r.status===401)throw new Error('badkey:tmdb');
+  if(!r.ok)throw new Error('http');
+  const j=await r.json();
+  return (j.results||[]).slice(0,12).map(x=>{
+    const t=x.title||x.name,o=x.original_title||x.original_name||'';
+    return{title:t,year:(x.release_date||x.first_air_date||'').slice(0,4),sub:o&&o!==t?o:'',cover:x.poster_path?'https://image.tmdb.org/t/p/w342'+x.poster_path:''};
+  });
+}
+async function books(q){
+  const ol=fetch(`https://openlibrary.org/search.json?q=${enc(q)}&limit=12&fields=title,author_name,first_publish_year,cover_i`)
+    .then(r=>{if(!r.ok)throw 0;return r.json()})
+    .then(j=>(j.docs||[]).map(d=>({title:d.title,year:d.first_publish_year||'',sub:(d.author_name||[])[0]||'',cover:d.cover_i?`https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg`:''})));
+  const gb=fetch(`https://www.googleapis.com/books/v1/volumes?q=${enc(q)}&maxResults=10&printType=books`)
+    .then(r=>{if(!r.ok)throw 0;return r.json()})
+    .then(j=>(j.items||[]).map(v=>{const b=v.volumeInfo||{};return{title:b.title,year:(b.publishedDate||'').slice(0,4),sub:(b.authors||[])[0]||'',cover:((b.imageLinks||{}).thumbnail||'').replace('http://','https://')}}));
+  const [a,b]=await Promise.allSettled([ol,gb]);
+  if(a.status==='rejected'&&b.status==='rejected')throw new Error('http');
+  const map=new Map();
+  [...(a.value||[]),...(b.value||[])].filter(x=>x.title).forEach(x=>{
+    const key=(x.title+'|'+x.sub).toLowerCase();
+    const prev=map.get(key);
+    if(!prev)map.set(key,x);else if(!prev.cover&&x.cover)prev.cover=x.cover;
+  });
+  return [...map.values()].slice(0,14);
+}
+async function games(q){
+  const k=cfg.rawg.trim();if(!k)throw new Error('nokey:rawg');
+  const r=await fetch(`https://api.rawg.io/api/games?key=${enc(k)}&search=${enc(q)}&page_size=12`);
+  if(r.status===401||r.status===403)throw new Error('badkey:rawg');
+  if(!r.ok)throw new Error('http');
+  const j=await r.json();
+  return (j.results||[]).map(x=>({title:x.name,year:(x.released||'').slice(0,4),sub:(x.genres||[]).slice(0,2).map(g=>g.name).join(', '),
+    cover:x.background_image?x.background_image.replace('/media/','/media/resize/420/-/'):''}));
+}
+const SEARCH={movie:q=>tmdb('movie',q),tv:q=>tmdb('tv',q),book:books,game:games};
+
+let seq=0,timer;
+const scheduleSearch=()=>{clearTimeout(timer);timer=setTimeout(doSearch,450)};
+const manualBtn=q=>ctx&&ctx.mode==='add'&&q.length>=2?`<button class="btn alt" data-act="manual">Añadir «${esc(q)}» sin portada</button>`:'';
+async function doSearch(){
+  clearTimeout(timer);
+  if(!ctx)return;
+  const q=$('#q').value.trim(),res=$('#res'),my=++seq;
+  if(q.length<2){ctx.results=[];res.innerHTML='<p class="note">Escribe al menos dos letras del título.</p>';return}
+  res.innerHTML='<p class="note">Buscando…</p>';
+  try{
+    const r=await SEARCH[ctx.cat](q);
+    if(my!==seq||!ctx)return;
+    ctx.results=r;
+    res.innerHTML=(r.length?r.map((x,n)=>`<button class="res" data-pick="${n}">${coverHTML({cat:ctx.cat,title:x.title,cover:x.cover})}
+      <span><b>${esc(x.title)}</b><small>${esc([x.sub,x.year].filter(Boolean).join(', '))}</small></span></button>`).join(''):'<p class="note">Sin resultados. Prueba con otro título.</p>')+manualBtn(q);
+  }catch(err){
+    if(my!==seq||!ctx)return;
+    const m=err.message||'';
+    if(/^(nokey|badkey)/.test(m)){
+      const n=m.endsWith('tmdb')?'The Movie Database':'RAWG';
+      res.innerHTML=`<div class="note"><p>${m.startsWith('nokey')?'Falta':'Revisa'} tu clave gratuita de ${n}.</p><button class="btn" data-act="settings">Configurar clave</button></div>`+manualBtn(q);
+    }else res.innerHTML=`<div class="note"><p>No se pudo buscar. Comprueba tu conexión.</p></div>`+manualBtn(q);
+  }
+}
+function catChips(){return Object.entries(CATS).map(([k,v])=>`<button class="chip${ctx.cat===k?' on':''}" data-cat="${k}">${v.label}</button>`).join('')}
+function openSearch(mode,id){
+  const it=id?items.find(x=>x.id===id):null;
+  ctx={mode,cat:it?it.cat:(tab==='all'?'movie':tab),itemId:id,results:[]};
+  openSheet(head(mode==='add'?'Añadir título':'Cambiar portada')+
+    (mode==='add'?`<div class="pick" id="catChips">${catChips()}</div>`:'')+
+    `<input id="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="${CATS[ctx.cat].ph}" value="${it?esc(it.title):''}">
+     <div id="res"><p class="note">Escribe el título y elige el resultado correcto.</p></div>`);
+  $('#q').focus();
+  if(it)doSearch();
+}
+function addItem(x){
+  const it={id:uid(),cat:ctx.cat,title:x.title,year:x.year||'',cover:x.cover||'',status:'pending',rating:0,date:'',notes:'',added:Date.now()};
+  items.push(it);save();
+  if(tab!=='all'&&tab!==it.cat)tab=it.cat;
+  store.set('bt.tab',tab);filter='all';
+  closeSheet();toast(`«${it.title}» añadido`);
+}
+
+/* ---------- Detalle ---------- */
+function starsHTML(r){return [1,2,3,4,5].map(n=>`<button data-r="${n}" class="${n<=r?'on':''}" aria-label="${n} estrellas">★</button>`).join('')}
+function openDetail(id){
+  const i=items.find(x=>x.id===id);if(!i)return;cur=id;
+  openSheet(head('Detalle')+`
+    <div class="dhead">${coverHTML(i)}<div>
+      <input id="dTitle" value="${esc(i.title)}" aria-label="Título">
+      <p>${CATS[i.cat].one}${i.year?', '+esc(i.year):''}</p>
+      <button class="link" data-act="cover">Cambiar portada</button></div></div>
+    <span class="lbl">Estado</span>
+    <div class="seg" id="dStatus">${STATUSES.map(s=>`<button data-st="${s}" class="s-${s}${i.status===s?' on':''}">${SL[s]}</button>`).join('')}</div>
+    <span class="lbl">Valoración</span>
+    <div class="stars" id="dStars">${starsHTML(i.rating)}</div>
+    <label for="dDate">Fecha en que lo terminaste</label>
+    <input type="date" id="dDate" value="${esc(i.date)}">
+    <label for="dNotes">Notas y crítica</label>
+    <textarea id="dNotes" placeholder="Qué te ha parecido, frases, ideas…">${esc(i.notes)}</textarea>
+    <button class="btn danger" data-act="del">Eliminar de mi bitácora</button>`);
+}
+function setStatus(i,s){
+  i.status=s;
+  if(s==='done'&&!i.date){i.date=today();$('#dDate').value=i.date}
+  document.querySelectorAll('#dStatus button').forEach(b=>b.classList.toggle('on',b.dataset.st===s));
+}
+
+/* ---------- Ajustes ---------- */
+function openSettings(){
+  openSheet(head('Ajustes')+`
+    <p class="note" style="margin-top:0">Los libros se buscan sin clave. Para películas, series y juegos necesitas una clave gratuita de cada servicio.</p>
+    <label for="kTmdb">Clave de The Movie Database (películas y series)</label>
+    <input id="kTmdb" value="${esc(cfg.tmdb)}" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pega aquí tu clave">
+    <p class="hl"><a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">Conseguir clave gratuita</a></p>
+    <label for="kRawg">Clave de RAWG (videojuegos)</label>
+    <input id="kRawg" value="${esc(cfg.rawg)}" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pega aquí tu clave">
+    <p class="hl"><a href="https://rawg.io/apidocs" target="_blank" rel="noopener">Conseguir clave gratuita</a></p>
+    <span class="lbl" style="margin-top:26px">Copia de seguridad</span>
+    <p class="hl" style="margin:0 0 4px">Tus datos se guardan solo en este iPhone. Exporta una copia de vez en cuando.</p>
+    <button class="btn alt" data-act="export">Exportar copia</button>
+    <button class="btn alt" data-act="import">Importar copia</button>
+    <input type="file" id="fImport" accept="application/json,.json" hidden>`);
+}
+async function exportData(){
+  const file=new File([JSON.stringify({version:1,items},null,1)],`bitacora-${today()}.json`,{type:'application/json'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file]});return}catch(e){if(e.name==='AbortError')return}
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;document.body.appendChild(a);a.click();a.remove();
+}
+function importData(file){
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      const d=JSON.parse(fr.result),arr=Array.isArray(d)?d:d.items;
+      if(!Array.isArray(arr))throw 0;
+      const ids=new Set(items.map(x=>x.id));let n=0;
+      arr.forEach(x=>{if(x&&x.id&&x.title&&CATS[x.cat]&&!ids.has(x.id)){items.push(x);n++}});
+      save();render();toast(`${n} títulos importados`);
+    }catch(e){toast('El archivo no es una copia válida')}
+  };
+  fr.readAsText(file);
+}
+
+/* ---------- Eventos ---------- */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-tab],[data-filter],[data-open],[data-act],[data-pick],[data-cat],[data-st],[data-r]');
+  if(!t)return;
+  const d=t.dataset;
+  if(d.tab){tab=d.tab;filter='all';store.set('bt.tab',tab);render();window.scrollTo(0,0)}
+  else if(d.filter){filter=d.filter;render()}
+  else if(d.open)openDetail(d.open);
+  else if(d.cat&&ctx){ctx.cat=d.cat;$('#catChips').innerHTML=catChips();$('#q').placeholder=CATS[ctx.cat].ph;doSearch()}
+  else if(d.pick!==undefined&&ctx){
+    const x=ctx.results[+d.pick];if(!x)return;
+    if(ctx.mode==='add')addItem(x);
+    else{const i=items.find(v=>v.id===ctx.itemId);if(i){i.cover=x.cover;if(!i.year)i.year=x.year||'';save();openDetail(i.id)}}
+  }
+  else if(d.st&&cur){const i=items.find(v=>v.id===cur);setStatus(i,d.st);save()}
+  else if(d.r&&cur){const i=items.find(v=>v.id===cur);i.rating=i.rating===+d.r?0:+d.r;save();$('#dStars').innerHTML=starsHTML(i.rating)}
+  else switch(d.act){
+    case'add':openSearch('add');break;
+    case'close':closeSheet();break;
+    case'settings':openSettings();break;
+    case'cover':openSearch('cover',cur);break;
+    case'manual':{const q=$('#q').value.trim();if(q)addItem({title:q});break}
+    case'del':{const i=items.find(v=>v.id===cur);if(i&&confirm(`¿Eliminar «${i.title}»?`)){items=items.filter(v=>v.id!==cur);save();closeSheet()}break}
+    case'export':exportData();break;
+    case'import':$('#fImport').click();break;
+  }
+});
+const onField=e=>{
+  const id=e.target.id;
+  if(id==='q'){scheduleSearch();return}
+  if(id==='kTmdb'||id==='kRawg'){cfg[id==='kTmdb'?'tmdb':'rawg']=e.target.value.trim();store.set('bt.cfg',cfg);return}
+  const i=cur&&items.find(v=>v.id===cur);if(!i)return;
+  if(id==='dTitle')i.title=e.target.value;
+  else if(id==='dDate')i.date=e.target.value;
+  else if(id==='dNotes')i.notes=e.target.value;
+  else return;
+  save();
+};
+document.addEventListener('input',onField);
+document.addEventListener('change',e=>{
+  if(e.target.id==='fImport'&&e.target.files[0])importData(e.target.files[0]);else onField(e);
+});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='q'){e.preventDefault();doSearch();e.target.blur()}});
+
+/* ---------- Icono para la pantalla de inicio ---------- */
+(function(){
+  try{
+    const c=document.createElement('canvas');c.width=c.height=180;const x=c.getContext('2d');
+    const g=x.createLinearGradient(0,0,180,180);g.addColorStop(0,'#3A4FE0');g.addColorStop(1,'#1B2566');
+    x.fillStyle=g;x.fillRect(0,0,180,180);
+    x.fillStyle='#fff';x.fillRect(48,32,84,116);
+    x.fillStyle='#E5A100';x.beginPath();x.moveTo(98,32);x.lineTo(120,32);x.lineTo(120,80);x.lineTo(109,69);x.lineTo(98,80);x.closePath();x.fill();
+    x.fillStyle='#1B2566';x.fillRect(60,100,58,6);x.fillRect(60,114,42,6);x.fillRect(60,128,50,6);
+    const l=document.createElement('link');l.rel='apple-touch-icon';l.href=c.toDataURL('image/png');document.head.appendChild(l);
+  }catch(e){}
+})();
+
+render();
+</script>
+</body>
+</html>
